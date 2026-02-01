@@ -2,26 +2,23 @@
 
 import React, { useState, useEffect } from 'react';
 
-// 1. Updated Interface to include missing fields
 export interface ApplicationData {
     id?: string;
-    application_number?: string;
     client: string | number;
+    university: string | number; // Added
+    program: string | number;    // Added
     program_intake: string | number;
     status: string;
     priority: string;
     assigned_to?: string | number | null;
     application_type: string;
     application_fee_amount?: number;
-    application_fee_paid?: boolean; // Missing field fixed
+    application_fee_paid?: boolean;
     tuition_fee_amount?: number;
     tuition_fee_currency?: string;
-    tuition_fee_paid_amount?: number; // Missing field fixed
+    tuition_fee_paid_amount?: number;
     university_application_id?: string;
     internal_notes?: string;
-    submission_date?: string | null; // Missing field fixed
-    decision_date?: string | null;   // Missing field fixed
-    decision?: string;               // Missing field fixed
 }
 
 interface ApplicationModalProps {
@@ -32,25 +29,25 @@ interface ApplicationModalProps {
 }
 
 const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose, onSaved, applicationData }) => {
-    // 2. Initial state with all required keys
     const initialFormState: ApplicationData = {
         client: '',
+        university: '',
+        program: '',
         program_intake: '',
         status: 'draft',
         priority: 'normal',
         application_type: 'paid',
         tuition_fee_currency: 'BDT',
         application_fee_paid: false,
+        application_fee_amount: 0,
+        tuition_fee_amount: 0,
         tuition_fee_paid_amount: 0,
-        decision: 'pending',
-        submission_date: null,
-        decision_date: null,
-        university_application_id: '',
-        internal_notes: ''
     };
 
     const [formData, setFormData] = useState<ApplicationData>(initialFormState);
     const [clients, setClients] = useState<any[]>([]);
+    const [universities, setUniversities] = useState<any[]>([]); // Added
+    const [programs, setPrograms] = useState<any[]>([]);         // Added
     const [intakes, setIntakes] = useState<any[]>([]);
     const [staff, setStaff] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -60,24 +57,58 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose, on
         const fetchData = async () => {
             try {
                 const accessToken = localStorage.getItem('suAccessToken');
-                const [clientsRes, intakesRes, staffRes] = await Promise.all([
-                    fetch('/api/clients/', { headers: { 'Authorization': `Bearer ${accessToken}` } }),
-                    fetch('/api/university-intakes/', { headers: { 'Authorization': `Bearer ${accessToken}` } }),
-                    fetch('/api/staff/', { headers: { 'Authorization': `Bearer ${accessToken}` } })
+                const headers = { 'Authorization': `Bearer ${accessToken}` };
+                
+                const [clientsRes, uniRes, staffRes] = await Promise.all([
+                    fetch('/api/clients/', { headers }),
+                    fetch('/api/universities/', { headers }),
+                    fetch('/api/staff/', { headers })
                 ]);
+                
                 const clientsData = await clientsRes.json();
-                const intakesData = await intakesRes.json();
+                const uniData = await uniRes.json();
                 const staffData = await staffRes.json();
+
                 setClients(clientsData.results || clientsData);
-                setIntakes(intakesData.results || intakesData);
+                setUniversities(uniData.results || uniData);
                 setStaff(staffData.results || staffData);
             } catch (err) {
-                console.error('Failed to fetch data', err);
+                console.error('Failed to fetch initial data', err);
             }
         };
 
         if (isOpen) fetchData();
     }, [isOpen]);
+
+    // Fetch Programs when University changes
+    useEffect(() => {
+        if (formData.university) {
+            const fetchPrograms = async () => {
+                const accessToken = localStorage.getItem('suAccessToken');
+                const res = await fetch(`/api/programs/?university=${formData.university}`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                const data = await res.json();
+                setPrograms(data.results || data);
+            };
+            fetchPrograms();
+        }
+    }, [formData.university]);
+
+    // Fetch Intakes when Program changes
+    useEffect(() => {
+        if (formData.program) {
+            const fetchIntakes = async () => {
+                const accessToken = localStorage.getItem('suAccessToken');
+                const res = await fetch(`/api/university-intakes/?program=${formData.program}`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                const data = await res.json();
+                setIntakes(data.results || data);
+            };
+            fetchIntakes();
+        }
+    }, [formData.program]);
 
     useEffect(() => {
         if (applicationData) {
@@ -92,26 +123,10 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose, on
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        setError('');
-
         try {
             const accessToken = localStorage.getItem('suAccessToken');
             const url = applicationData?.id ? `/api/applications/${applicationData.id}/` : '/api/applications/';
             const method = applicationData?.id ? 'PATCH' : 'POST';
-
-            // Clean payload for Django
-            const payload = {
-                ...formData,
-                assigned_to: formData.assigned_to || null,
-                client: formData.client || null,
-                program_intake: formData.program_intake || null,
-                application_fee_amount: Number(formData.application_fee_amount) || 0,
-                tuition_fee_amount: Number(formData.tuition_fee_amount) || 0,
-                tuition_fee_paid_amount: Number(formData.tuition_fee_paid_amount) || 0,
-                application_fee_paid: !!formData.application_fee_paid,
-                submission_date: formData.submission_date || null,
-                decision_date: formData.decision_date || null,
-            };
 
             const res = await fetch(url, {
                 method,
@@ -119,14 +134,10 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose, on
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${accessToken}`,
                 },
-                body: JSON.stringify(payload),
+                body: JSON.stringify(formData),
             });
 
-            if (!res.ok) {
-                const errData = await res.json();
-                throw new Error(JSON.stringify(errData) || 'Failed to save application');
-            }
-
+            if (!res.ok) throw new Error('Failed to save application');
             onSaved();
             onClose();
         } catch (err: any) {
@@ -140,156 +151,125 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose, on
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
             <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden">
                 <div className="p-6 border-b border-slate-800 flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-white">{applicationData ? 'Edit Application' : 'Add Application'}</h2>
-                    <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+                    <h2 className="text-xl font-bold text-white">{applicationData ? 'Edit' : 'New'} Application</h2>
+                    <button onClick={onClose} className="text-slate-400 hover:text-white">✕</button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-                    {error && (
-                        <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-3 rounded-lg text-sm break-words">
-                            {error}
-                        </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-4 text-left">
+                <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto text-left">
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* Client Selector */}
                         <div className="col-span-2">
                             <label className="block text-sm font-medium text-slate-400 mb-1">Client</label>
-                            <select
-                                required
-                                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500"
+                            <select 
+                                required 
+                                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white"
                                 value={formData.client}
-                                onChange={e => setFormData({ ...formData, client: e.target.value })}
+                                onChange={e => setFormData({...formData, client: e.target.value})}
                             >
                                 <option value="">Select Client</option>
-                                {clients.map(c => (
-                                    <option key={c.id} value={c.id}>{c.user_full_name} ({c.client_id})</option>
-                                ))}
+                                {clients.map(c => <option key={c.id} value={c.id}>{c.user_full_name}</option>)}
                             </select>
                         </div>
 
+                        {/* University Selector */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-400 mb-1">University</label>
+                            <select 
+                                required 
+                                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white"
+                                value={formData.university}
+                                onChange={e => setFormData({...formData, university: e.target.value, program: '', program_intake: ''})}
+                            >
+                                <option value="">Select University</option>
+                                {universities.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                            </select>
+                        </div>
+
+                        {/* Program Selector */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-400 mb-1">Program</label>
+                            <select 
+                                required 
+                                disabled={!formData.university}
+                                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white disabled:opacity-50"
+                                value={formData.program}
+                                onChange={e => setFormData({...formData, program: e.target.value, program_intake: ''})}
+                            >
+                                <option value="">Select Program</option>
+                                {programs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            </select>
+                        </div>
+
+                        {/* Intake Selector */}
                         <div className="col-span-2">
-                            <label className="block text-sm font-medium text-slate-400 mb-1">Program Intake</label>
-                            <select
-                                required
-                                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500"
+                            <label className="block text-sm font-medium text-slate-400 mb-1">Intake</label>
+                            <select 
+                                required 
+                                disabled={!formData.program}
+                                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white disabled:opacity-50"
                                 value={formData.program_intake}
-                                onChange={e => setFormData({ ...formData, program_intake: e.target.value })}
+                                onChange={e => setFormData({...formData, program_intake: e.target.value})}
                             >
                                 <option value="">Select Intake</option>
-                                {intakes.map(i => (
-                                    <option key={i.id} value={i.id}>
-                                        {i.program_name} - {i.university_name} ({i.intake_name})
-                                    </option>
-                                ))}
+                                {intakes.map(i => <option key={i.id} value={i.id}>{i.intake_name}</option>)}
                             </select>
+                        </div>
+
+                        {/* Application Type */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-400 mb-1">Application Type</label>
+                            <select 
+                                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white"
+                                value={formData.application_type}
+                                onChange={e => setFormData({...formData, application_type: e.target.value})}
+                            >
+                                <option value="paid">Paid</option>
+                                <option value="free">Free</option>
+                            </select>
+                        </div>
+
+                        {/* CONDITIONAL: Application Fee Amount */}
+                        {formData.application_type === 'paid' && (
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-1">Application Fee (Amount)</label>
+                                <input 
+                                    type="number" 
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white"
+                                    value={formData.application_fee_amount}
+                                    onChange={e => setFormData({...formData, application_fee_amount: Number(e.target.value)})}
+                                />
+                            </div>
+                        )}
+
+                        {/* Tuition Fields */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-400 mb-1">Tuition Fee</label>
+                            <input 
+                                type="number" 
+                                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white"
+                                value={formData.tuition_fee_amount}
+                                onChange={e => setFormData({...formData, tuition_fee_amount: Number(e.target.value)})}
+                            />
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-slate-400 mb-1">Status</label>
-                            <select
-                                required
-                                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500"
+                            <select 
+                                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white"
                                 value={formData.status}
-                                onChange={e => setFormData({ ...formData, status: e.target.value })}
+                                onChange={e => setFormData({...formData, status: e.target.value})}
                             >
                                 <option value="draft">Draft</option>
-                                <option value="docs_pending">Pending Documents</option>
-                                <option value="docs_reviewing">Reviewing Documents</option>
-                                <option value="ready">Ready to Submit</option>
-                                <option value="submitted">Submitted to University</option>
+                                <option value="submitted">Submitted</option>
                                 <option value="accepted">Accepted</option>
                                 <option value="rejected">Rejected</option>
-                                <option value="visa_processing">Visa Processing</option>
-                                <option value="enrolled">Enrolled</option>
                             </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-slate-400 mb-1">Application Type</label>
-                            <select
-                                required
-                                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500"
-                                value={formData.application_type}
-                                onChange={e => setFormData({ ...formData, application_type: e.target.value })}
-                            >
-                                <option value="paid">Paid Application</option>
-                                <option value="free">Free Application</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-slate-400 mb-1">Priority</label>
-                            <select
-                                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white"
-                                value={formData.priority}
-                                onChange={e => setFormData({ ...formData, priority: e.target.value })}
-                            >
-                                <option value="normal">Normal</option>
-                                <option value="high">High</option>
-                                <option value="urgent">Urgent</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-slate-400 mb-1">Assigned Staff</label>
-                            <select
-                                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white"
-                                value={formData.assigned_to || ''}
-                                onChange={e => setFormData({ ...formData, assigned_to: e.target.value || null })}
-                            >
-                                <option value="">Unassigned</option>
-                                {staff.map(s => (
-                                    <option key={s.id} value={s.id}>{s.user_full_name}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-slate-400 mb-1">Application Fee Paid?</label>
-                            <div className="flex items-center h-10">
-                                <input
-                                    type="checkbox"
-                                    className="h-5 w-5 rounded border-slate-700 bg-slate-800 text-red-500 focus:ring-red-500"
-                                    checked={!!formData.application_fee_paid}
-                                    onChange={e => setFormData({ ...formData, application_fee_paid: e.target.checked })}
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-slate-400 mb-1">Submission Date</label>
-                            <input
-                                type="date"
-                                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white"
-                                value={formData.submission_date || ''}
-                                onChange={e => setFormData({ ...formData, submission_date: e.target.value })}
-                            />
-                        </div>
-
-                        <div className="col-span-2">
-                            <label className="block text-sm font-medium text-slate-400 mb-1">Internal Notes</label>
-                            <textarea
-                                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white"
-                                value={formData.internal_notes || ''}
-                                onChange={e => setFormData({ ...formData, internal_notes: e.target.value })}
-                                rows={2}
-                            />
                         </div>
                     </div>
 
                     <div className="flex justify-end gap-3 pt-6 border-t border-slate-800">
-                        <button type="button" onClick={onClose} className="px-4 py-2 text-slate-400 hover:text-white transition-colors">
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white px-6 py-2 rounded-lg transition-colors font-semibold shadow-lg shadow-red-500/20"
-                        >
+                        <button type="button" onClick={onClose} className="px-4 py-2 text-slate-400">Cancel</button>
+                        <button type="submit" disabled={loading} className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg">
                             {loading ? 'Saving...' : 'Save Application'}
                         </button>
                     </div>
@@ -298,6 +278,5 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose, on
         </div>
     );
 };
-
 
 export default ApplicationModal;
