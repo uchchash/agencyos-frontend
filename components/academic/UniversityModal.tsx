@@ -21,6 +21,7 @@ interface UniversityData {
     number: string;
     country: string | number;
     city: string | number;
+    logo?: string | null;
     is_active: boolean;
 }
 
@@ -44,6 +45,8 @@ const UniversityModal: React.FC<UniversityModalProps> = ({ isOpen, onClose, onSa
     const [countries, setCountries] = useState<Country[]>([]);
     const [cities, setCities] = useState<City[]>([]);
     const [filteredCities, setFilteredCities] = useState<City[]>([]);
+    const [logoFile, setLogoFile] = useState<File | null>(null);
+    const [logoPreview, setLogoPreview] = useState<string>('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -75,6 +78,13 @@ const UniversityModal: React.FC<UniversityModalProps> = ({ isOpen, onClose, onSa
                 country: universityData.country.toString(),
                 city: universityData.city.toString()
             });
+            if ((universityData as UniversityData).logo) {
+                setLogoPreview((universityData as UniversityData).logo as string);
+                setLogoFile(null);
+            } else {
+                setLogoPreview('');
+                setLogoFile(null);
+            }
         } else {
             setFormData({
                 name: '',
@@ -85,8 +95,18 @@ const UniversityModal: React.FC<UniversityModalProps> = ({ isOpen, onClose, onSa
                 city: '',
                 is_active: true,
             });
+            setLogoPreview('');
+            setLogoFile(null);
         }
     }, [universityData, isOpen]);
+
+    useEffect(() => {
+        return () => {
+            if (logoPreview && logoFile) {
+                URL.revokeObjectURL(logoPreview);
+            }
+        };
+    }, [logoPreview, logoFile]);
 
     useEffect(() => {
         if (formData.country) {
@@ -108,16 +128,37 @@ const UniversityModal: React.FC<UniversityModalProps> = ({ isOpen, onClose, onSa
             const url = universityData?.id ? `/api/universities/${universityData.id}/` : '/api/universities/';
             const method = universityData?.id ? 'PATCH' : 'POST';
 
-            // Ensure price fields or logo fields are handled if needed, 
-            // but for now only text fields as per model
-            const res = await fetch(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${accessToken}`,
-                },
-                body: JSON.stringify(formData),
-            });
+            let res: Response;
+
+            if (logoFile) {
+                const body = new FormData();
+                body.append('name', formData.name);
+                body.append('university_type', formData.university_type);
+                body.append('website', formData.website);
+                body.append('number', formData.number);
+                body.append('country', String(formData.country));
+                body.append('city', String(formData.city));
+                body.append('is_active', formData.is_active ? 'true' : 'false');
+                body.append('logo', logoFile);
+
+                res = await fetch(url, {
+                    method,
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                    },
+                    body,
+                });
+            } else {
+                // No file — send JSON
+                res = await fetch(url, {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`,
+                    },
+                    body: JSON.stringify(formData),
+                });
+            }
 
             if (!res.ok) {
                 const data = await res.json();
@@ -243,6 +284,46 @@ const UniversityModal: React.FC<UniversityModalProps> = ({ isOpen, onClose, onSa
                                 className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-blue-600 focus:ring-blue-500"
                             />
                             <label htmlFor="is_active" className="text-sm font-medium text-slate-300">Active</label>
+                        </div>
+                        <div className="pt-2 text-left">
+                            <label className="block text-sm font-medium text-slate-400 mb-1">Logo</label>
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={e => {
+                                        const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+                                        if (file) {
+                                            const url = URL.createObjectURL(file);
+                                            // revoke previous object URL if created from file
+                                            if (logoFile && logoPreview) URL.revokeObjectURL(logoPreview);
+                                            setLogoFile(file);
+                                            setLogoPreview(url);
+                                        } else {
+                                            if (logoFile && logoPreview) URL.revokeObjectURL(logoPreview);
+                                            setLogoFile(null);
+                                            setLogoPreview('');
+                                        }
+                                    }}
+                                    className="text-sm text-slate-300"
+                                />
+                                {logoPreview && (
+                                    <div className="flex items-center gap-2">
+                                        <img src={logoPreview} alt="logo preview" className="w-16 h-16 object-cover rounded-md border border-slate-700" />
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (logoFile && logoPreview) URL.revokeObjectURL(logoPreview);
+                                                setLogoFile(null);
+                                                setLogoPreview('');
+                                            }}
+                                            className="text-sm text-red-400 hover:text-red-300"
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 
