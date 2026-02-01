@@ -67,7 +67,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ isOpen, onClose, onSuccess 
     const fetchApplications = async (clientId: string) => {
         try {
             const accessToken = localStorage.getItem('suAccessToken');
-            const res = await fetch(`/api/applications-all/?client=${clientId}`, {
+            const res = await fetch(`/api/applications/?client=${clientId}`, {
                 headers: { 'Authorization': `Bearer ${accessToken}` }
             });
             const data = await res.json();

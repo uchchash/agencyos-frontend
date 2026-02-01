@@ -87,7 +87,7 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose, on
 
         try {
             const accessToken = localStorage.getItem('suAccessToken');
-            const url = applicationData?.id ? `/api/applications-all/${applicationData.id}/` : '/api/applications-all/';
+            const url = applicationData?.id ? `/api/applications/${applicationData.id}/` : '/api/applications/';
             const method = applicationData?.id ? 'PATCH' : 'POST';
 
             const payload = {
