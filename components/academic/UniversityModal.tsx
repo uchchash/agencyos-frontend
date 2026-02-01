@@ -194,16 +194,56 @@ const UniversityModal: React.FC<UniversityModalProps> = ({ isOpen, onClose, onSa
                     )}
 
                     <div className="space-y-4 text-left">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-400 mb-1">University Name</label>
-                            <input
-                                type="text"
-                                required
-                                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
-                                value={formData.name}
-                                onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                placeholder="Harvard University"
-                            />
+                        <div className="grid grid-cols-6 gap-4 items-center">
+                            <div className="col-span-4">
+                                <label className="block text-sm font-medium text-slate-400 mb-1">University Name</label>
+                                <input
+                                    type="text"
+                                    required
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                                    value={formData.name}
+                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                    placeholder="Harvard University"
+                                />
+                            </div>
+
+                            <div className="col-span-2 text-left">
+                                <label className="block text-sm font-medium text-slate-400 mb-1">Logo</label>
+                                <div className="flex items-center gap-2">
+                                    <label htmlFor="logo_input" className="cursor-pointer inline-flex items-center gap-2 w-full px-3 py-2 border-2 border-dashed rounded-lg bg-slate-800 border-slate-700 text-sm text-slate-300 hover:bg-slate-800/90">
+                                        {logoPreview ? (
+                                            <img src={logoPreview} alt="logo preview" className="w-10 h-10 rounded object-cover" />
+                                        ) : (
+                                            <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12v6M9 15l3-3 3 3" />
+                                            </svg>
+                                        )}
+                                        <span className="truncate">{logoFile ? logoFile.name : logoPreview ? 'Change' : 'Upload'}</span>
+                                    </label>
+                                    <input
+                                        id="logo_input"
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={e => {
+                                            const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+                                            if (file) {
+                                                const url = URL.createObjectURL(file);
+                                                if (logoFile && logoPreview) URL.revokeObjectURL(logoPreview);
+                                                setLogoFile(file);
+                                                setLogoPreview(url);
+                                            } else {
+                                                if (logoFile && logoPreview) URL.revokeObjectURL(logoPreview);
+                                                setLogoFile(null);
+                                                setLogoPreview('');
+                                            }
+                                        }}
+                                        className="hidden"
+                                    />
+                                </div>
+                                {logoPreview && (
+                                    <div className="mt-2 text-xs text-slate-400">Preview shown — click the button to change</div>
+                                )}
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
@@ -285,46 +325,7 @@ const UniversityModal: React.FC<UniversityModalProps> = ({ isOpen, onClose, onSa
                             />
                             <label htmlFor="is_active" className="text-sm font-medium text-slate-300">Active</label>
                         </div>
-                        <div className="pt-2 text-left">
-                            <label className="block text-sm font-medium text-slate-400 mb-1">Logo</label>
-                            <div className="flex items-center gap-3">
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={e => {
-                                        const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
-                                        if (file) {
-                                            const url = URL.createObjectURL(file);
-                                            // revoke previous object URL if created from file
-                                            if (logoFile && logoPreview) URL.revokeObjectURL(logoPreview);
-                                            setLogoFile(file);
-                                            setLogoPreview(url);
-                                        } else {
-                                            if (logoFile && logoPreview) URL.revokeObjectURL(logoPreview);
-                                            setLogoFile(null);
-                                            setLogoPreview('');
-                                        }
-                                    }}
-                                    className="text-sm text-slate-300"
-                                />
-                                {logoPreview && (
-                                    <div className="flex items-center gap-2">
-                                        <img src={logoPreview} alt="logo preview" className="w-16 h-16 object-cover rounded-md border border-slate-700" />
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                if (logoFile && logoPreview) URL.revokeObjectURL(logoPreview);
-                                                setLogoFile(null);
-                                                setLogoPreview('');
-                                            }}
-                                            className="text-sm text-red-400 hover:text-red-300"
-                                        >
-                                            Remove
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                        
                     </div>
 
                     <div className="pt-4 flex gap-3 sticky bottom-0 bg-slate-900 pb-2">
