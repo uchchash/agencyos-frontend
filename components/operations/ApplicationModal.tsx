@@ -299,4 +299,5 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose, on
     );
 };
 
+
 export default ApplicationModal;
