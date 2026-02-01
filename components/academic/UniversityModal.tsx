@@ -105,7 +105,7 @@ const UniversityModal: React.FC<UniversityModalProps> = ({ isOpen, onClose, onSa
 
         try {
             const accessToken = localStorage.getItem('suAccessToken');
-            const url = universityData?.id ? `/api/universities-all/${universityData.id}/` : '/api/universities-all/';
+            const url = universityData?.id ? `/api/universities/${universityData.id}/` : '/api/universities/';
             const method = universityData?.id ? 'PATCH' : 'POST';
 
             // Ensure price fields or logo fields are handled if needed, 

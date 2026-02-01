@@ -32,7 +32,7 @@ const UniversityList: React.FC<UniversityListProps> = ({ refreshTrigger, onEdit 
         setLoading(true);
         try {
             const accessToken = localStorage.getItem('suAccessToken');
-            let url = '/api/universities-all/?';
+            let url = '/api/universities/?';
             if (search) url += `search=${search}`;
 
             const res = await fetch(url, {
@@ -68,7 +68,7 @@ const UniversityList: React.FC<UniversityListProps> = ({ refreshTrigger, onEdit 
 
         try {
             const accessToken = localStorage.getItem('suAccessToken');
-            const res = await fetch(`/api/universities-all/${id}/`, {
+            const res = await fetch(`/api/universities/${id}/`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
