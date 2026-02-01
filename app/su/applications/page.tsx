@@ -89,7 +89,6 @@ const ApplicationsPage = () => {
                 onSearch={setSearch}
             />
             
-
             <ApplicationModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
