@@ -32,6 +32,9 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose, on
         status: 'draft',
         priority: 'normal',
         application_type: 'paid',
+        tuition_fee_currency: 'BDT',
+        application_fee_paid: false,
+        tuition_fee_paid_amount: 0,
     });
     const [clients, setClients] = useState<any[]>([]);
     const [intakes, setIntakes] = useState<any[]>([]);
@@ -95,6 +98,12 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose, on
                 assigned_to: formData.assigned_to === '' ? null : formData.assigned_to,
                 client: formData.client === '' ? null : formData.client,
                 program_intake: formData.program_intake === '' ? null : formData.program_intake,
+                application_fee_amount: formData.application_fee_amount ? Number(formData.application_fee_amount) : 0,
+                tuition_fee_amount: formData.tuition_fee_amount ? Number(formData.tuition_fee_amount) : 0,
+                tuition_fee_paid_amount: formData.tuition_fee_paid_amount ? Number(formData.tuition_fee_paid_amount) : 0,
+                application_fee_paid: !!formData.application_fee_paid,
+                submission_date: formData.submission_date || null,
+                decision_date: formData.decision_date || null,
             };
 
             const res = await fetch(url, {
@@ -182,10 +191,44 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose, on
                             >
                                 <option value="draft">Draft</option>
                                 <option value="docs_pending">Pending Documents</option>
+                                <option value="docs_reviewing">Reviewing Documents</option>
                                 <option value="ready">Ready to Submit</option>
-                                <option value="submitted">Submitted</option>
+                                <option value="submitted">Submitted to University</option>
+                                <option value="acknowledged">Acknowledged by University</option>
+                                <option value="under_review">Under Review</option>
+                                <option value="additional_info">Additional Info Required</option>
+                                <option value="interview_scheduled">Interview Scheduled</option>
+                                <option value="interview_completed">Interview Completed</option>
+                                <option value="pending_decision">Pending Decision</option>
                                 <option value="accepted">Accepted</option>
+                                <option value="conditionally_accepted">Conditionally Accepted</option>
+                                <option value="waitlisted">Waitlisted</option>
                                 <option value="rejected">Rejected</option>
+                                <option value="tuition_pending">Tuition Fee Pending</option>
+                                <option value="tuition_paid">Tuition Fee Paid</option>
+                                <option value="tuition_partial">Tuition Fee Partial</option>
+                                <option value="tuition_refund_processing">Tuition Refund Processing</option>
+                                <option value="tuition_refunded">Tuition Fee Refunded</option>
+                                <option value="visa_processing">Visa Processing</option>
+                                <option value="visa_approved">Visa Approved</option>
+                                <option value="visa_rejected">Visa Rejected</option>
+                                <option value="enrolled">Enrolled</option>
+                                <option value="deferred">Deferred</option>
+                                <option value="withdrawn">Withdrawn</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-400 mb-1">Application Type</label>
+                            <select
+                                required
+                                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500"
+                                value={formData.application_type}
+                                onChange={e => setFormData({ ...formData, application_type: e.target.value })}
+                            >
+                                <option value="paid">Paid Application</option>
+                                <option value="free">Free Application</option>
                             </select>
                         </div>
 
@@ -257,6 +300,78 @@ const ApplicationModal: React.FC<ApplicationModalProps> = ({ isOpen, onClose, on
                                 value={formData.tuition_fee_amount || ''}
                                 onChange={e => setFormData({ ...formData, tuition_fee_amount: parseFloat(e.target.value) || 0 })}
                                 placeholder="0.00"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-400 mb-1">Tuition Currency</label>
+                            <select
+                                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500"
+                                value={formData.tuition_fee_currency || 'BDT'}
+                                onChange={e => setFormData({ ...formData, tuition_fee_currency: e.target.value })}
+                            >
+                                <option value="BDT">BDT</option>
+                                <option value="USD">USD</option>
+                                <option value="CAD">CAD</option>
+                                <option value="GBP">GBP</option>
+                                <option value="EUR">EUR</option>
+                                <option value="AUD">AUD</option>
+                            </select>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <label className="text-sm font-medium text-slate-400">Application Fee Paid</label>
+                            <input
+                                type="checkbox"
+                                checked={!!formData.application_fee_paid}
+                                onChange={e => setFormData({ ...formData, application_fee_paid: e.target.checked })}
+                                className="h-4 w-4"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-400 mb-1">Tuition Fee Paid Amount</label>
+                            <input
+                                type="number"
+                                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500"
+                                value={formData.tuition_fee_paid_amount || ''}
+                                onChange={e => setFormData({ ...formData, tuition_fee_paid_amount: parseFloat(e.target.value) || 0 })}
+                                placeholder="0.00"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-400 mb-1">Submission Date</label>
+                            <input
+                                type="date"
+                                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500"
+                                value={formData.submission_date || ''}
+                                onChange={e => setFormData({ ...formData, submission_date: e.target.value })}
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-400 mb-1">Decision</label>
+                            <select
+                                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500"
+                                value={formData.decision || 'pending'}
+                                onChange={e => setFormData({ ...formData, decision: e.target.value })}
+                            >
+                                <option value="pending">Pending</option>
+                                <option value="accepted">Accepted</option>
+                                <option value="conditional">Conditional</option>
+                                <option value="rejected">Rejected</option>
+                                <option value="waitlisted">Waitlisted</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-400 mb-1">Decision Date</label>
+                            <input
+                                type="date"
+                                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-500"
+                                value={formData.decision_date || ''}
+                                onChange={e => setFormData({ ...formData, decision_date: e.target.value })}
                             />
                         </div>
                     </div>
