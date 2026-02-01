@@ -88,6 +88,7 @@ const ApplicationsPage = () => {
                 onDelete={handleDelete}
                 onSearch={setSearch}
             />
+            
 
             <ApplicationModal
                 isOpen={isModalOpen}
