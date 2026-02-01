@@ -15,7 +15,7 @@ const ApplicationsPage = () => {
         setLoading(true);
         try {
             const accessToken = localStorage.getItem('suAccessToken');
-            const res = await fetch('/api/applications-all/', {
+            const res = await fetch('/api/applications/', {
                 headers: { 'Authorization': `Bearer ${accessToken}` }
             });
             const data = await res.json();
@@ -41,7 +41,7 @@ const ApplicationsPage = () => {
 
         try {
             const accessToken = localStorage.getItem('suAccessToken');
-            const res = await fetch(`/api/applications-all/${id}/`, {
+            const res = await fetch(`/api/applications/${id}/`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${accessToken}` }
             });
